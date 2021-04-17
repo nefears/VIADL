@@ -1,5 +1,4 @@
-import os, pandas
-os.chdir(dataloc)
+import os, pandas, read_trc, read_filenames
 
 # Workspace and directory definitions
 home = 'D:\Dropbox (University of Michigan)\Python\VIADL'
