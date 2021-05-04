@@ -1,14 +1,14 @@
 def pathlength(StartRow, EndRow, MarkerX, MarkerY, MarkerZ):
+    import numpy
     if 'MarkerX':
-        XPathLength=abs(diff(MarkerX[StartRow:EndRow+1]))
+        XPathLength=sum(abs(numpy.diff(MarkerX)))
     if 'MarkerY':
-        YPathLength=abs(diff(MarkerY[StartRow:EndRow+1]))
+        YPathLength=sum(abs(numpy.diff(MarkerY)))
     if 'MarkerZ':
-        ZPathLength=abs(diff(MarkerZ[StartRow:EndRow+1]))
+        ZPathLength=sum(abs(numpy.diff(MarkerZ)))
     if 'MarkerX' and 'MarkerY' and 'MarkerZ':
-        markers=[MarkerX, MarkerY, MarkerZ]
-        ThreeDPathLength=
-
-
+        markers = numpy.asarray(list(zip(MarkerX, MarkerY, MarkerZ)))
+        ThreeDPathLength = sum(abs(numpy.linalg.norm(pt2-pt1))
+                             for pt1, pt2 in zip(markers, markers[1:]))
     return XPathLength, YPathLength, ZPathLength, ThreeDPathLength
 
