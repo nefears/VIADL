@@ -44,7 +44,7 @@ elif '_l' in filename:
 XPathLength, YPathLength, ZPathLength, ThreeDPathLength = pathlength(StartRow, EndRow, Marker.X, Marker.Y, Marker.Z)
 
 # Three point Derivative
-
+#define velocity, acceleration from forward and backward points
 
 # Jerk Cost
 
