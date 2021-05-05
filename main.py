@@ -2,6 +2,7 @@ import os, pandas, numpy
 from read_trc import read_trc
 from read_filenames import read_filenames
 from pathlength import pathlength
+from threeptderiv import threeptderiv
 
 
 # Workspace and directory definitions
@@ -44,9 +45,16 @@ elif '_l' in filename:
 XPathLength, YPathLength, ZPathLength, ThreeDPathLength = pathlength(StartRow, EndRow, Marker.X, Marker.Y, Marker.Z)
 
 # Three point Derivative
-#define velocity, acceleration from forward and backward points
+markers = numpy.asarray(zip(Marker.X, Marker.Y, Marker.Z))
+PosDiff = (numpy.linalg.norm(pt2-pt1)
+           for pt1, pt2 in zip(markers, markers[1:]))
+vel = threeptderiv(StartRow, EndRow, PosDiff, frametime)
+accel = threeptderiv(StartRow, EndRow, accel, frametime)
+jerk = threeptderiv(StartRow, EndRow, jerk, frametime)
 
 # Jerk Cost
+
+#Work percent contribution?
 
 
 
