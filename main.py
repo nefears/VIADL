@@ -1,4 +1,4 @@
-import os, pandas, numpy, scipy
+import os, pandas, numpy, scipy, openpyxl
 from read_trc import read_trc
 from read_filenames import read_filenames
 from pathlength import pathlength
@@ -7,7 +7,8 @@ from jerkcost import jerkcost
 
 # Workspace and directory definitions
 home = os.getcwd()
-dataloc = 'D:\Dropbox (University of Michigan)\Python'
+# dataloc = 'D:\Dropbox (University of Michigan)\Python'
+dataloc = "C:/Users/nefea/Dropbox (University of Michigan)/Python"
 os.chdir(dataloc)
 CupData = pandas.read_excel('INSARCupData.xlsx', sheet_name='CupLocation')
 part = 'VIADL_022'
@@ -27,8 +28,8 @@ db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand',
                                'HeadMaxVel', 'HeadMeanVel', 'HeadMaxAccel', 'HeadMeanAccel','HeadMaxJerk', 'HeadMeanJerk', 'HeadJerkCost', 'HeadXPathLength', 'HeadYPathLength', 'HeadZPathLength', 'HeadThreeDPathLength'])
 
 # Read in demographic data per part
-Group =
-Age =
+Group = 'TD'
+Age = 11
 
 # For loop by part
 
@@ -74,27 +75,30 @@ elif '_l' in filename:
 
 # Three point Derivatives
 # Hand
-markers = numpy.asarray(zip(HandMarker.X, HandMarker.Y, HandMarker.Z))
-HandPosDiff = (numpy.linalg.norm(pt2-pt1)
-           for pt1, pt2 in zip(markers, markers[1:]))
+HandPosDiff=numpy.empty([1,0]) # empty numpy.array to collect data
+markers = numpy.asarray(list(zip(HandMarker.X, HandMarker.Y, HandMarker.Z)))
+for pt1, pt2 in zip(markers, markers[1:]):
+    HandPosDiff = numpy.append(HandPosDiff, numpy.linalg.norm(pt2 - pt1))
 
 Handvel = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
 Handaccel = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
 Handjerk = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, filter_cutoff, filter_type)
 
 # Chest
-markers = numpy.asarray(zip(ChestMarker.X, ChestMarker.Y, ChestMarker.Z))
-ChestPosDiff = (numpy.linalg.norm(pt2-pt1)
-           for pt1, pt2 in zip(markers, markers[1:]))
+ChestPosDiff=numpy.empty([1,0]) # empty numpy.array to collect data
+markers = numpy.asarray(list(zip(ChestMarker.X, ChestMarker.Y, ChestMarker.Z)))
+for pt1, pt2 in zip(markers, markers[1:]):
+    ChestPosDiff = numpy.append(ChestPosDiff, numpy.linalg.norm(pt2 - pt1))
 
 Chestvel = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
 Chestaccel = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
 Chestjerk = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, filter_cutoff, filter_type)
 
 # Head
-markers = numpy.asarray(zip(HeadMarker.X, HeadMarker.Y, HeadMarker.Z))
-HeadPosDiff = (numpy.linalg.norm(pt2-pt1)
-           for pt1, pt2 in zip(markers, markers[1:]))
+HeadPosDiff=numpy.empty([1,0]) # empty numpy.array to collect data
+markers = numpy.asarray(list(zip(HeadMarker.X, HeadMarker.Y, HeadMarker.Z)))
+for pt1, pt2 in zip(markers, markers[1:]):
+    HeadPosDiff = numpy.append(HeadPosDiff, numpy.linalg.norm(pt2 - pt1))
 
 Headvel = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
 Headaccel = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
@@ -103,18 +107,19 @@ Headjerk = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, fi
 # Find start and end of movement
 # start of movement
 over_thresh = abs(Handvel) > (Handvel.max()*percentstartthresh)
-frames_over = numpy.where(over_thresh == 1)
-for j in range(len(frames_over)-11):
-    if frames_over[j+12]-frames_over[j] == 12:
-        startmove = frames_over[j]
+frames_over = numpy.asarray(numpy.where(over_thresh == 1))
+for j in range(frames_over.shape[1]-12):
+    print(frames_over[:, j+12]-frames_over[:, j])
+    if frames_over[:, j+12]-frames_over[:, j] == 12:
+        startmove = int(frames_over[:,j])
         break
 
 # end of movement
 under_thresh = abs(Handvel) < (Handvel.max()*percentstopthresh)
-frames_under = numpy.where(over_thresh == 1)
-move_stops = numpy.array([frames_under[1], numpy.where(numpy.diff(frames_under)>1)])
+frames_under = numpy.asarray(numpy.where(over_thresh == 1))
+move_stops = numpy.where(numpy.diff(frames_under)>1)[1]
 mouth_stops = move_stops[abs(HeadMarker.Z[move_stops])-HandMarker.Z[move_stops]<mouthdist]
-endmove = mouth_stops[1]
+endmove = int(mouth_stops[0])
 
 # Maximum and mean derivatives
 # Hand
