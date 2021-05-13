@@ -8,7 +8,7 @@ def pathlength(StartRow, EndRow, MarkerX, MarkerY, MarkerZ):
         ZPathLength=sum(abs(numpy.diff(MarkerZ)))
     if 'MarkerX' and 'MarkerY' and 'MarkerZ':
         markers = numpy.asarray(list(zip(MarkerX, MarkerY, MarkerZ)))
-        ThreeDPathLength = sum(abs(numpy.linalg.norm(pt2-pt1))
+        ThreeDPathLength = sum(abs(numpy.linalg.norm(pt2-pt1, 2))
                              for pt1, pt2 in zip(markers, markers[1:]))
     return XPathLength, YPathLength, ZPathLength, ThreeDPathLength
 
