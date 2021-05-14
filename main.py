@@ -8,12 +8,13 @@ from jerkcost import jerkcost
 
 # Workspace and directory definitions
 home = os.getcwd()
-dataloc = 'D:/Dropbox (University of Michigan)/Python'
+# dataloc = 'D:/Dropbox (University of Michigan)/Python'
+dataloc = 'F:/Projects/VIADL/Data/Cortex'
 # dataloc = "C:/Users/nefea/Dropbox (University of Michigan)/Python"
 os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
 CupData = pandas.read_excel('INSARCupData.xlsx', sheet_name='CupLocation')
-part = 'VIADL_022'
+part = 'VIADL_050'
 mouthdist = 75
 percentstartthresh = .05
 percentstopthresh = .10
@@ -27,7 +28,7 @@ db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionT
                                'HandMaxVel', 'HandMeanVel', 'HandMaxAccel', 'HandMeanAccel','HandMaxJerk', 'HandMeanJerk', 'HandJerkCost', 'HandXPathLength', 'HandYPathLength', 'HandZPathLength', 'HandThreeDPathLength',
                                'ChestMaxVel', 'ChestMeanVel', 'ChestMaxAccel', 'ChestMeanAccel','ChestMaxJerk', 'ChestMeanJerk', 'ChestJerkCost', 'ChestXPathLength', 'ChestYPathLength', 'ChestZPathLength', 'ChestThreeDPathLength',
                                'HeadMaxVel', 'HeadMeanVel', 'HeadMaxAccel', 'HeadMeanAccel','HeadMaxJerk', 'HeadMeanJerk', 'HeadJerkCost', 'HeadXPathLength', 'HeadYPathLength', 'HeadZPathLength', 'HeadThreeDPathLength'])
-db.to_csv("IMDRC2021_HandChestHead_05132021.csv", mode='w', index=False)
+db.to_csv(part+"_IMDRC2021_HandChestHead_05142021_test.csv", mode='w', index=False)
 
 # Loop through all parts in DemoData
 
@@ -37,13 +38,13 @@ Age = DemoData.loc[numpy.where(DemoData.ID == part)[0], 'Age'].item()
 CupLocs = CupData[CupData.ID == part]
 
 # Find TRC file names by part
-folder = dataloc + '\\' + part + '\Tracked + Packaged\TRC'
+folder = dataloc + '/' + part + '/Tracked + Packaged/TRC'
 os.chdir(folder)
-files = read_filenames('UPPER.trc')
+files = sorted(read_filenames('UPPER.trc'))
 
 # For loop by number of trials within part
 for filenum in range(0, len(files)):
-    # filenum = 7
+# filenum = 7
     if 'Trial' in locals():
         del [Trial, Hand, CupLoc, HandMarker, ChestMarker, HeadMarker, startmove, endmove, ReactionTime, MovementDur,
            HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
@@ -91,7 +92,7 @@ for filenum in range(0, len(files)):
 
     # Three point Derivatives
     # Hand
-    HandPosDiff = numpy.empty([1,0]) # empty numpy.array to collect data
+    HandPosDiff = numpy.empty([1, 0])  # empty numpy.array to collect data
     markers = numpy.asarray(list(zip(HandMarker.X, HandMarker.Y, HandMarker.Z)))
     for pt1, pt2 in zip(markers, markers[1:]):
         HandPosDiff = numpy.append(HandPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
@@ -105,7 +106,7 @@ for filenum in range(0, len(files)):
     Handjerk = numpy.diff(Handaccel)/frametime
 
     # Chest
-    ChestPosDiff=numpy.empty([1,0]) # empty numpy.array to collect data
+    ChestPosDiff = numpy.empty([1, 0])  # empty numpy.array to collect data
     markers = numpy.asarray(list(zip(ChestMarker.X, ChestMarker.Y, ChestMarker.Z)))
     for pt1, pt2 in zip(markers, markers[1:]):
         ChestPosDiff = numpy.append(ChestPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
@@ -119,7 +120,7 @@ for filenum in range(0, len(files)):
     Chestjerk = numpy.diff(Chestaccel)/frametime
 
     # Head
-    HeadPosDiff=numpy.empty([1,0]) # empty numpy.array to collect data
+    HeadPosDiff = numpy.empty([1, 0])  # empty numpy.array to collect data
     markers = numpy.asarray(list(zip(HeadMarker.X, HeadMarker.Y, HeadMarker.Z)))
     for pt1, pt2 in zip(markers, markers[1:]):
         HeadPosDiff = numpy.append(HeadPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
@@ -219,43 +220,42 @@ for filenum in range(0, len(files)):
 
     db.loc[len(db)] = ith_parttrial
 
-    # Plot figure to check data
-    fig, (Xposplot, Yposplot, Zposplot, velplot, accelplot, jerkplot) = plt.subplots(6, 1)
-    fig.suptitle(part+'- '+Hand+' Hand, Trial '+Trial)
-    Time = numpy.asarray(range(0, len(Handvel), 1))*frametime
-    Xposplot.plot(Time[0:endmove], (HandMarker.X[0:endmove])-HandMarker.X[startmove])
-    Xposplot.set_ylabel('X Position')
-    Xposplot.axvline(x=.5, color='blue')
-    Xposplot.axvline(x=Time[startmove], color='green')
-
-    Yposplot.plot(Time[0:endmove], HandMarker.Y[0:endmove]-HandMarker.Y[startmove])
-    Yposplot.set_ylabel('Y Position')
-    Yposplot.axvline(x=.5, color='blue')
-    Yposplot.axvline(x=Time[startmove], color='green')
-
-    Zposplot.plot(Time[0:endmove], HandMarker.Z[0:endmove]-HandMarker.Z[startmove])
-    Zposplot.set_ylabel('Z Position')
-    Zposplot.axvline(x=.5, color='blue')
-    Zposplot.axvline(x=Time[startmove], color='green')
-
-    velplot.plot(Time[0:endmove], Handvel[0:endmove])
-    velplot.set_ylabel('Velocity')
-    velplot.axvline(x=.5, color='blue')
-    velplot.axvline(x=Time[startmove], color='green')
-
-    accelplot.plot(Time[0:endmove], Handaccel[0:endmove])
-    accelplot.set_ylabel('Acceleration')
-    accelplot.axvline(x=.5, color='blue')
-    accelplot.axvline(x=Time[startmove], color='green')
-
-    jerkplot.plot(Time[0:endmove], Handjerk[0:endmove])
-    jerkplot.set_ylabel('Jerk')
-    jerkplot.set_xlabel('Time (ms)')
-    jerkplot.axvline(x=.5, color='blue')
-    jerkplot.axvline(x=Time[startmove], color='green')
+    # # Plot figure to check data
+    # fig, (Xposplot, Yposplot, Zposplot, velplot, accelplot, jerkplot) = plt.subplots(6, 1)
+    # fig.suptitle(part+'- '+Hand+' Hand, Trial '+Trial)
+    # Time = numpy.asarray(range(0, len(Handvel), 1))*frametime
+    # Xposplot.plot(Time[0:endmove], (HandMarker.X[0:endmove])-HandMarker.X[startmove])
+    # Xposplot.set_ylabel('X Position')
+    # Xposplot.axvline(x=.5, color='blue')
+    # Xposplot.axvline(x=Time[startmove], color='green')
+    #
+    # Yposplot.plot(Time[0:endmove], HandMarker.Y[0:endmove]-HandMarker.Y[startmove])
+    # Yposplot.set_ylabel('Y Position')
+    # Yposplot.axvline(x=.5, color='blue')
+    # Yposplot.axvline(x=Time[startmove], color='green')
+    #
+    # Zposplot.plot(Time[0:endmove], HandMarker.Z[0:endmove]-HandMarker.Z[startmove])
+    # Zposplot.set_ylabel('Z Position')
+    # Zposplot.axvline(x=.5, color='blue')
+    # Zposplot.axvline(x=Time[startmove], color='green')
+    #
+    # velplot.plot(Time[0:endmove], Handvel[0:endmove])
+    # velplot.set_ylabel('Velocity')
+    # velplot.axvline(x=.5, color='blue')
+    # velplot.axvline(x=Time[startmove], color='green')
+    #
+    # accelplot.plot(Time[0:endmove], Handaccel[0:endmove])
+    # accelplot.set_ylabel('Acceleration')
+    # accelplot.axvline(x=.5, color='blue')
+    # accelplot.axvline(x=Time[startmove], color='green')
+    #
+    # jerkplot.plot(Time[0:endmove], Handjerk[0:endmove])
+    # jerkplot.set_ylabel('Jerk')
+    # jerkplot.set_xlabel('Time (ms)')
+    # jerkplot.axvline(x=.5, color='blue')
+    # jerkplot.axvline(x=Time[startmove], color='green')
 
 # Save database to CSV
 os.chdir(dataloc)
-db.to_csv("IMDRC2021_HandChestHead_05132021.csv", mode='a', header=False, index=False)
-
+db.to_csv(part+"_IMDRC2021_HandChestHead_05142021_test.csv", mode='a', header=False, index=False)
 
