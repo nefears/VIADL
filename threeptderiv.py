@@ -20,6 +20,6 @@ def threeptderiv(StartRow, EndRow, data, frametime, filter_order, filter_cutoff,
     # print(data[len(data)-1], data[len(data)-2])
     # print(deriv)
     if filter_order and filter_type and filter_type:
-        b, a = signal.butter(filter_order, filter_cutoff, filter_type, fs=(1000/frametime))
+        b, a = signal.butter(filter_order, filter_cutoff, filter_type)
         deriv_out = signal.filtfilt(b, a, deriv)
     return deriv_out
