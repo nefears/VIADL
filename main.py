@@ -1,9 +1,9 @@
-import os, pandas, numpy, scipy, sys
+import os, pandas, numpy, sys
+from scipy import signal
 # import matplotlib.pyplot as plt
 from read_trc import read_trc
 from read_filenames import read_filenames
 from pathlength import pathlength
-# from threeptderiv import threeptderiv
 from jerkcost import jerkcost
 
 # Workspace and directory definitions
@@ -14,21 +14,22 @@ dataloc = 'F:/Projects/VIADL/Data/Cortex'
 os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
 CupData = pandas.read_excel('INSARCupData.xlsx', sheet_name='CupLocation')
-# part = 'VIADL_050'
 mouthdist = 75
-percentstartthresh = .05
+percentstartthresh = .10
 percentstopthresh = .10
 framerate = 120
 filter_type = 'lowpass'
 filter_order = 4
-filter_cutoff = 6
+filter_cutoff = 10/(framerate/2)
+
+outputfilename = "Combined_IMDRC2021_HandChestHead_05182021_1075_10Hzfiltered.csv"
 
 # Create database using Pandas dataframe
 db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur',
                                'HandMaxVel', 'HandMeanVel', 'HandMaxAccel', 'HandMeanAccel','HandMaxJerk', 'HandMeanJerk', 'HandJerkCost', 'HandXPathLength', 'HandYPathLength', 'HandZPathLength', 'HandThreeDPathLength',
                                'ChestMaxVel', 'ChestMeanVel', 'ChestMaxAccel', 'ChestMeanAccel','ChestMaxJerk', 'ChestMeanJerk', 'ChestJerkCost', 'ChestXPathLength', 'ChestYPathLength', 'ChestZPathLength', 'ChestThreeDPathLength',
                                'HeadMaxVel', 'HeadMeanVel', 'HeadMaxAccel', 'HeadMeanAccel','HeadMaxJerk', 'HeadMeanJerk', 'HeadJerkCost', 'HeadXPathLength', 'HeadYPathLength', 'HeadZPathLength', 'HeadThreeDPathLength'])
-db.to_csv("Combined_IMDRC2021_HandChestHead_05172021_test.csv", mode='w', index=False)
+db.to_csv(outputfilename, mode='w', index=False)
 
 # Loop through all parts in DemoData
 for part in sorted(DemoData.ID):
@@ -95,20 +96,19 @@ for part in sorted(DemoData.ID):
 
         print("Starting " + part + " " + Hand + " Hand, Trial " + str(Trial))
         try:
-            # Three point Derivatives
+            # Derivatives
+            # Create butterworth filter
+            b, a = signal.butter(filter_order, filter_cutoff, filter_type)
+
             # Hand
             HandPosDiff = numpy.empty([1, 0])  # empty numpy.array to collect data
             markers = numpy.asarray(list(zip(HandMarker.X, HandMarker.Y, HandMarker.Z)))
             for pt1, pt2 in zip(markers, markers[1:]):
                 HandPosDiff = numpy.append(HandPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
 
-            # Handvel = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
-            # Handaccel = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
-            # Handjerk = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, filter_cutoff, filter_type)
-
-            Handvel = HandPosDiff/frametime
-            Handaccel = numpy.diff(Handvel)/frametime
-            Handjerk = numpy.diff(Handaccel)/frametime
+            Handvel = signal.filtfilt(b, a, (HandPosDiff / frametime))
+            Handaccel = signal.filtfilt(b, a, (numpy.diff(Handvel) / frametime))
+            Handjerk = signal.filtfilt(b, a, (numpy.diff(Handaccel) / frametime))
 
             # Chest
             ChestPosDiff = numpy.empty([1, 0])  # empty numpy.array to collect data
@@ -116,13 +116,9 @@ for part in sorted(DemoData.ID):
             for pt1, pt2 in zip(markers, markers[1:]):
                 ChestPosDiff = numpy.append(ChestPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
 
-            # Chestvel = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
-            # Chestaccel = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
-            # Chestjerk = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, filter_cutoff, filter_type)
-
-            Chestvel = ChestPosDiff/frametime
-            Chestaccel = numpy.diff(Chestvel)/frametime
-            Chestjerk = numpy.diff(Chestaccel)/frametime
+            Chestvel = signal.filtfilt(b, a, (ChestPosDiff / frametime))
+            Chestaccel = signal.filtfilt(b, a, (numpy.diff(Chestvel) / frametime))
+            Chestjerk = signal.filtfilt(b, a, (numpy.diff(Chestaccel) / frametime))
 
             # Head
             HeadPosDiff = numpy.empty([1, 0])  # empty numpy.array to collect data
@@ -130,13 +126,9 @@ for part in sorted(DemoData.ID):
             for pt1, pt2 in zip(markers, markers[1:]):
                 HeadPosDiff = numpy.append(HeadPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
 
-            # Headvel = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
-            # Headaccel = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
-            # Headjerk = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, filter_cutoff, filter_type)
-
-            Headvel = HeadPosDiff/frametime
-            Headaccel = numpy.diff(Headvel)/frametime
-            Headjerk = numpy.diff(Headaccel)/frametime
+            Headvel = signal.filtfilt(b, a, (HeadPosDiff / frametime))
+            Headaccel = signal.filtfilt(b, a, (numpy.diff(Headvel) / frametime))
+            Headjerk = signal.filtfilt(b, a, (numpy.diff(Headaccel) / frametime))
 
             # Find start and end of movement
             # start of movement
@@ -232,7 +224,7 @@ for part in sorted(DemoData.ID):
 
 # Save database to CSV
 os.chdir(dataloc)
-db.to_csv("Combined_IMDRC2021_HandChestHead_05172021_test.csv", mode='a', header=False, index=False)
+db.to_csv(outputfilename, mode='a', header=False, index=False)
 
 # Plot figure to check data
 # fig, (Xposplot, Yposplot, Zposplot, velplot, accelplot, jerkplot) = plt.subplots(6, 1)
