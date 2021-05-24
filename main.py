@@ -15,6 +15,7 @@ os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
 CupData = pandas.read_excel('INSARCupData.xlsx', sheet_name='CupLocation')
 mouthdist = 75
+handcupdist = 30
 percentstartthresh = .10
 percentstopthresh = .10
 framerate = 120
@@ -25,8 +26,8 @@ filter_cutoff = 10/(framerate/2)
 outputfilename = "Combined_IMDRC2021_HandChestHead_05242021_1075_10Hzfiltered_Test.csv"
 
 # Create database using Pandas dataframe
-db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur',
-                               'HandMaxVel', 'HandMeanVel', 'HandMaxAccel', 'HandMeanAccel','HandMaxJerk', 'HandMeanJerk', 'HandJerkCost', 'HandXPathLength', 'HandYPathLength', 'HandZPathLength', 'HandThreeDPathLength',
+db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur', 'MouthMoveDur','CupMoveDur',
+                               'HandCupMoveMaxVel','HandCupMoveMeanVel','HandMouthMoveMaxVel','HandMouthMoveMeanVel','HandMaxVel', 'HandMeanVel', 'HandMaxAccel', 'HandMeanAccel','HandMaxJerk', 'HandMeanJerk', 'HandJerkCost', 'HandXPathLength', 'HandYPathLength', 'HandZPathLength', 'HandThreeDPathLength',
                                'ChestMaxVel', 'ChestMeanVel', 'ChestMaxAccel', 'ChestMeanAccel','ChestMaxJerk', 'ChestMeanJerk', 'ChestJerkCost', 'ChestXPathLength', 'ChestYPathLength', 'ChestZPathLength', 'ChestThreeDPathLength',
                                'HeadMaxVel', 'HeadMeanVel', 'HeadMaxAccel', 'HeadMeanAccel','HeadMaxJerk', 'HeadMeanJerk', 'HeadJerkCost', 'HeadXPathLength', 'HeadYPathLength', 'HeadZPathLength', 'HeadThreeDPathLength'])
 db.to_csv(outputfilename, mode='w', index=False)
@@ -45,7 +46,7 @@ os.chdir(folder)
 files = sorted(read_filenames(['cup', 'UPPER.trc']))
 
 # For loop by number of trials within part
-for filenum in range(0, 1): #  len(files)
+for filenum in range(0, len(files)):
     if 'Trial' in locals():
         del [Trial, Hand, CupLoc, HandMarker, ChestMarker, HeadMarker]
     try:
@@ -56,6 +57,7 @@ for filenum in range(0, 1): #  len(files)
                HeadMaxVel, HeadMeanVel, HeadMaxAccel, HeadMeanAccel, HeadMaxJerk, HeadMeanJerk, HeadJerkCost, HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength]
     except Exception:
         print("Unexpected error during deleting: ", sys.exc_info()[0])
+
     # Read in TRC data
     filename = files[filenum]
     TRC = read_trc(filename, folder, home)
@@ -150,17 +152,24 @@ for filenum in range(0, 1): #  len(files)
                 mouth_stops = numpy.append(mouth_stops, move_stops[0][i])
         endmove = int(mouth_stops[0])
 
+        # Segmenting the movement
+        CupReach = numpy.where((HandMarker.Z-CupMarker.Z[0]) < handcupdist)[0][0]
+
         # Distance between hand and cup
         CupDistX = abs(CupMarker.X[0] - HandMarker.X[startmove])
         CupDistY = abs(CupMarker.Y[0] - HandMarker.Y[startmove])
         CupDistZ = abs(CupMarker.Z[0] - HandMarker.Z[startmove])
         CupDist3D = abs(numpy.linalg.norm(numpy.asarray(CupMarker.iloc[[0]]) - numpy.asarray(HandMarker.iloc[[startmove]]), 2))
 
+
         # Reaction Time and Movement Time
         ReactionTime = TRC.Time[startmove]-TRC.Time[61]
         MovementDur = TRC.Time[endmove]-TRC.Time[startmove]
+        MouthMoveDur = TRC.Time[CupReach]-TRC.Time[startmove]
+        CupMoveDur = TRC.Time[endmove]-TRC.Time[CupReach]
 
-        # Maximum and mean derivatives
+
+        # Whole movement maximum and mean derivatives
         # Hand
         HandMaxVel = numpy.amax(Handvel[startmove:endmove])
         HandMeanVel = numpy.mean(Handvel[startmove:endmove])
@@ -168,6 +177,23 @@ for filenum in range(0, 1): #  len(files)
         HandMeanAccel = numpy.mean(Handaccel[startmove:endmove])
         HandMaxJerk = numpy.amax(Handjerk[startmove:endmove])
         HandMeanJerk = numpy.mean(Handjerk[startmove:endmove])
+
+        # Segment derivatives
+        # Reach to the Cup
+        HandCupMoveMaxVel = numpy.amax(Handvel[startmove:CupReach])
+        HandCupMoveMeanVel = numpy.mean(Handvel[startmove:CupReach])
+        HandCupMoveMaxAccel = numpy.amax(Handaccel[startmove:CupReach])
+        HandCupMoveMeanAccel = numpy.mean(Handaccel[startmove:CupReach])
+        HandCupMoveMaxJerk = numpy.amax(Handjerk[startmove:CupReach])
+        HandCupMoveMeanJerk = numpy.mean(Handjerk[startmove:CupReach])
+
+        # Bringing Cup to the Mouth
+        HandMouthMoveMaxVel = numpy.amax(Handvel[CupReach:endmove])
+        HandMouthMoveMeanVel = numpy.mean(Handvel[CupReach:endmove])
+        HandMouthMoveMaxAccel = numpy.amax(Handaccel[CupReach:endmove])
+        HandMouthMoveMeanAccel = numpy.mean(Handaccel[CupReach:endmove])
+        HandMouthMoveMaxJerk = numpy.amax(Handjerk[CupReach:endmove])
+        HandMouthMoveMeanJerk = numpy.mean(Handjerk[CupReach:endmove])
 
         # Chest
         ChestMaxVel = numpy.amax(Chestvel[startmove:endmove])
@@ -211,8 +237,8 @@ for filenum in range(0, 1): #  len(files)
         HeadThreeDPathLength = HeadThreeDPathLength/CupDist3D
 
         # Append data to database
-        ith_parttrial = [part, Group, Age, Trial, Hand, ReactionTime, MovementDur,
-                        HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
+        ith_parttrial = [part, Group, Age, Trial, Hand, ReactionTime, MovementDur, MouthMoveDur, CupMoveDur,
+                        HandCupMoveMaxVel, HandCupMoveMeanVel, HandMouthMoveMaxVel, HandMouthMoveMeanVel, HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
                         ChestMaxVel, ChestMeanVel, ChestMaxAccel, ChestMeanAccel, ChestMaxJerk, ChestMeanJerk, ChestJerkCost, ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength,
                         HeadMaxVel, HeadMeanVel, HeadMaxAccel, HeadMeanAccel, HeadMaxJerk, HeadMeanJerk, HeadJerkCost, HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength]
 
@@ -222,37 +248,49 @@ for filenum in range(0, 1): #  len(files)
         fig, (Xposplot, Yposplot, Zposplot, velplot, accelplot, jerkplot) = plt.subplots(6, 1)
         fig.suptitle(part+'- '+Hand+' Hand, Trial '+Trial)
         Time = TRC.Time[0:endmove]
-        # plt.xticks(Time,
+        plt.xticks(numpy.arange(min(Time), max(Time)+1,.5))
         Xposplot.plot(Time[0:endmove], (HandMarker.X[0:endmove])-HandMarker.X[startmove])
         Xposplot.set_ylabel('X Position')
         Xposplot.axvline(x=.5, color='blue')
         Xposplot.axvline(x=Time[startmove], color='green')
+        Xposplot.axvline(x=Time[CupReach], color='orange')
+        Xposplot.axvline(x=Time[endmove], color='red')
 
         Yposplot.plot(Time[0:endmove], HandMarker.Y[0:endmove]-HandMarker.Y[startmove])
         Yposplot.set_ylabel('Y Position')
         Yposplot.axvline(x=.5, color='blue')
         Yposplot.axvline(x=Time[startmove], color='green')
+        Yposplot.axvline(x=Time[CupReach], color='orange')
+        Yposplot.axvline(x=Time[endmove], color='red')
 
         Zposplot.plot(Time[0:endmove], (HandMarker.Z[0:endmove]-HandMarker.Z[startmove])*-1)
         Zposplot.set_ylabel('Z Position')
         Zposplot.axvline(x=.5, color='blue')
         Zposplot.axvline(x=Time[startmove], color='green')
+        Zposplot.axvline(x=Time[CupReach], color='orange')
+        Zposplot.axvline(x=Time[endmove], color='red')
 
         velplot.plot(Time[0:endmove], Handvel[0:endmove])
         velplot.set_ylabel('Velocity')
         velplot.axvline(x=.5, color='blue')
         velplot.axvline(x=Time[startmove], color='green')
+        velplot.axvline(x=Time[CupReach], color='orange')
+        velplot.axvline(x=Time[endmove], color='red')
 
         accelplot.plot(Time[0:endmove], Handaccel[0:endmove])
         accelplot.set_ylabel('Acceleration')
         accelplot.axvline(x=.5, color='blue')
         accelplot.axvline(x=Time[startmove], color='green')
+        accelplot.axvline(x=Time[CupReach], color='orange')
+        accelplot.axvline(x=Time[endmove], color='red')
 
         jerkplot.plot(Time[0:endmove], Handjerk[0:endmove])
         jerkplot.set_ylabel('Jerk')
         jerkplot.set_xlabel('Time (ms)')
         jerkplot.axvline(x=.5, color='blue')
         jerkplot.axvline(x=Time[startmove], color='green')
+        jerkplot.axvline(x=Time[CupReach], color='orange')
+        jerkplot.axvline(x=Time[endmove], color='red')
 
         print("Completed " + part + " " + Hand + " Hand, Trial " + str(Trial))
     except Exception:
