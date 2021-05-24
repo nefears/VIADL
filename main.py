@@ -4,18 +4,16 @@ import matplotlib.pyplot as plt
 from read_trc import read_trc
 from read_filenames import read_filenames
 from pathlength import pathlength
-from threeptderiv import threeptderiv
 from jerkcost import jerkcost
 
 # Workspace and directory definitions
 home = os.getcwd()
 # dataloc = 'D:/Dropbox (University of Michigan)/Python'
-dataloc = 'F:/Projects/VIADL/Data/Cortex'
-# dataloc = "C:/Users/nefea/Dropbox (University of Michigan)/Python"
+# dataloc = 'F:/Projects/VIADL/Data/Cortex'
+dataloc = "C:/Users/nefea/Dropbox (University of Michigan)/Python"
 os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
 CupData = pandas.read_excel('INSARCupData.xlsx', sheet_name='CupLocation')
-part = 'VIADL_015'
 mouthdist = 75
 percentstartthresh = .10
 percentstopthresh = .10
@@ -24,7 +22,7 @@ filter_type = 'lowpass'
 filter_order = 4
 filter_cutoff = 10/(framerate/2)
 
-outputfilename = "Combined_IMDRC2021_HandChestHead_05182021_1075_test.csv"
+outputfilename = "Combined_IMDRC2021_HandChestHead_05242021_1075_10Hzfiltered_Test.csv"
 
 # Create database using Pandas dataframe
 db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur',
@@ -35,6 +33,7 @@ db.to_csv(outputfilename, mode='w', index=False)
 
 # Loop through all parts in DemoData
 # for part in sorted(DemoData.ID):
+part = 'VIADL_022'
 # Save for each part
 Group = DemoData.loc[numpy.where(DemoData.ID == part)[0], 'Group'].item()
 Age = DemoData.loc[numpy.where(DemoData.ID == part)[0], 'Age'].item()
@@ -46,8 +45,7 @@ os.chdir(folder)
 files = sorted(read_filenames(['cup', 'UPPER.trc']))
 
 # For loop by number of trials within part
-# for filenum in range(0, len(files)):
-filenum=1
+for filenum in range(0, 1): #  len(files)
     if 'Trial' in locals():
         del [Trial, Hand, CupLoc, HandMarker, ChestMarker, HeadMarker]
     try:
@@ -58,7 +56,6 @@ filenum=1
                HeadMaxVel, HeadMeanVel, HeadMaxAccel, HeadMeanAccel, HeadMaxJerk, HeadMeanJerk, HeadJerkCost, HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength]
     except Exception:
         print("Unexpected error during deleting: ", sys.exc_info()[0])
-
     # Read in TRC data
     filename = files[filenum]
     TRC = read_trc(filename, folder, home)
@@ -101,7 +98,6 @@ filenum=1
     print("Starting " + part + " " + Hand + " Hand, Trial " + str(Trial))
     try:
         # Derivatives
-
         # Create butterworth filter
         b, a = signal.butter(filter_order, filter_cutoff, filter_type)
 
@@ -111,13 +107,9 @@ filenum=1
         for pt1, pt2 in zip(markers, markers[1:]):
             HandPosDiff = numpy.append(HandPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
 
-        # Handvel2 = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
-        # Handaccel2 = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
-        # Handjerk2 = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, filter_cutoff, filter_type)
-
-        Handvel = signal.filtfilt(b, a, (HandPosDiff/frametime))
-        Handaccel = signal.filtfilt(b, a, (numpy.diff(Handvel)/frametime))
-        Handjerk = signal.filtfilt(b, a, (numpy.diff(Handaccel)/frametime))
+        Handvel = signal.filtfilt(b, a, (HandPosDiff / frametime))
+        Handaccel = signal.filtfilt(b, a, (numpy.diff(Handvel) / frametime))
+        Handjerk = signal.filtfilt(b, a, (numpy.diff(Handaccel) / frametime))
 
         # Chest
         ChestPosDiff = numpy.empty([1, 0])  # empty numpy.array to collect data
@@ -125,13 +117,9 @@ filenum=1
         for pt1, pt2 in zip(markers, markers[1:]):
             ChestPosDiff = numpy.append(ChestPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
 
-        # Chestvel = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
-        # Chestaccel = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
-        # Chestjerk = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, filter_cutoff, filter_type)
-
-        Chestvel = signal.filtfilt(b, a, (ChestPosDiff/frametime))
-        Chestaccel = signal.filtfilt(b, a, (numpy.diff(Chestvel)/frametime))
-        Chestjerk = signal.filtfilt(b, a, (numpy.diff(Chestaccel)/frametime))
+        Chestvel = signal.filtfilt(b, a, (ChestPosDiff / frametime))
+        Chestaccel = signal.filtfilt(b, a, (numpy.diff(Chestvel) / frametime))
+        Chestjerk = signal.filtfilt(b, a, (numpy.diff(Chestaccel) / frametime))
 
         # Head
         HeadPosDiff = numpy.empty([1, 0])  # empty numpy.array to collect data
@@ -139,13 +127,9 @@ filenum=1
         for pt1, pt2 in zip(markers, markers[1:]):
             HeadPosDiff = numpy.append(HeadPosDiff, numpy.linalg.norm(pt2 - pt1, 2))
 
-        # Headvel = threeptderiv(StartRow, EndRow, HandPosDiff, frametime, filter_order, filter_cutoff, filter_type)
-        # Headaccel = threeptderiv(StartRow, EndRow, Handvel, frametime, filter_order, filter_cutoff, filter_type)
-        # Headjerk = threeptderiv(StartRow, EndRow, Handaccel, frametime, filter_order, filter_cutoff, filter_type)
-
-        Headvel = signal.filtfilt(b, a, (HeadPosDiff/frametime))
-        Headaccel = signal.filtfilt(b, a, (numpy.diff(Headvel)/frametime))
-        Headjerk = signal.filtfilt(b, a, (numpy.diff(Headaccel)/frametime))
+        Headvel = signal.filtfilt(b, a, (HeadPosDiff / frametime))
+        Headaccel = signal.filtfilt(b, a, (numpy.diff(Headvel) / frametime))
+        Headjerk = signal.filtfilt(b, a, (numpy.diff(Headaccel) / frametime))
 
         # Find start and end of movement
         # start of movement
@@ -237,7 +221,8 @@ filenum=1
         # Plot figure to check data
         fig, (Xposplot, Yposplot, Zposplot, velplot, accelplot, jerkplot) = plt.subplots(6, 1)
         fig.suptitle(part+'- '+Hand+' Hand, Trial '+Trial)
-        Time = numpy.asarray(range(0, len(Handvel), 1))*frametime
+        Time = TRC.Time[0:endmove]
+        # plt.xticks(Time,
         Xposplot.plot(Time[0:endmove], (HandMarker.X[0:endmove])-HandMarker.X[startmove])
         Xposplot.set_ylabel('X Position')
         Xposplot.axvline(x=.5, color='blue')
@@ -248,36 +233,32 @@ filenum=1
         Yposplot.axvline(x=.5, color='blue')
         Yposplot.axvline(x=Time[startmove], color='green')
 
-        Zposplot.plot(Time[0:endmove], (HandMarker.Z[0:endmove]*-1)-(HandMarker.Z[startmove]*-1))
+        Zposplot.plot(Time[0:endmove], (HandMarker.Z[0:endmove]-HandMarker.Z[startmove])*-1)
         Zposplot.set_ylabel('Z Position')
         Zposplot.axvline(x=.5, color='blue')
         Zposplot.axvline(x=Time[startmove], color='green')
 
         velplot.plot(Time[0:endmove], Handvel[0:endmove])
-        velplot.plot(Time[0:endmove], Handvel2[0:endmove])
         velplot.set_ylabel('Velocity')
         velplot.axvline(x=.5, color='blue')
         velplot.axvline(x=Time[startmove], color='green')
 
         accelplot.plot(Time[0:endmove], Handaccel[0:endmove])
-        accelplot.plot(Time[0:endmove], Handaccel2[0:endmove])
         accelplot.set_ylabel('Acceleration')
         accelplot.axvline(x=.5, color='blue')
         accelplot.axvline(x=Time[startmove], color='green')
 
         jerkplot.plot(Time[0:endmove], Handjerk[0:endmove])
-        jerkplot.plot(Time[0:endmove], Handjerk2[0:endmove])
         jerkplot.set_ylabel('Jerk')
         jerkplot.set_xlabel('Time (ms)')
         jerkplot.axvline(x=.5, color='blue')
         jerkplot.axvline(x=Time[startmove], color='green')
-        plt.xticks(numpy.arange(Time[0], Time[endmove], 0.5))
 
         print("Completed " + part + " " + Hand + " Hand, Trial " + str(Trial))
     except Exception:
         print(part + " " + Hand + " Hand, Trial " + str(Trial) + " failed!", "\n",
               "Unexpected error: ", sys.exc_info()[0])
-        # continue
+        continue
 
 # Save database to CSV
 os.chdir(dataloc)
