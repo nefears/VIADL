@@ -9,7 +9,7 @@ from jerkcost import jerkcost
 # Workspace and directory definitions
 home = os.getcwd()
 # dataloc = 'D:/Dropbox (University of Michigan)/Python'
-dataloc = 'D:/Projects/VIADL/Data/Cortex'
+dataloc = 'F:/Projects/VIADL/Data/Cortex'
 # dataloc = "C:/Users/nefea/Dropbox (University of Michigan)/Python"
 os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
@@ -23,11 +23,11 @@ filter_type = 'lowpass'
 filter_order = 4
 filter_cutoff = 10/(framerate/2)
 
-outputfilename = "Combined_IMDRC2021_HandChestHead_05242021_1075_10Hzfiltered_test2.csv"
+outputfilename = "Combined_IMDRC2021_HandChestHead_05262021_105075_10Hzfiltered_test.csv"
 
 # Create database using Pandas dataframe
 db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur', 'CupMoveDur', 'MouthMoveDur',
-                                'HandCupMoveMaxVel', 'HandCupMoveMeanVel', 'HandMouthMoveMaxVel', 'HandMouthMoveMeanVel',
+                                'HandCupMoveMaxVel', 'HandCupMoveMeanVel', 'CupMoveTimetoMaxPeak', 'HandMouthMoveMaxVel', 'HandMouthMoveMeanVel', 'MouthMoveTimetoMaxPeak',
                                'HandMaxVel', 'HandMeanVel', 'HandMaxAccel', 'HandMeanAccel','HandMaxJerk', 'HandMeanJerk', 'HandJerkCost', 'HandXPathLength', 'HandYPathLength', 'HandZPathLength', 'HandThreeDPathLength',
                                'ChestMaxVel', 'ChestMeanVel', 'ChestMaxAccel', 'ChestMeanAccel','ChestMaxJerk', 'ChestMeanJerk', 'ChestJerkCost', 'ChestXPathLength', 'ChestYPathLength', 'ChestZPathLength', 'ChestThreeDPathLength',
                                'HeadMaxVel', 'HeadMeanVel', 'HeadMaxAccel', 'HeadMeanAccel','HeadMaxJerk', 'HeadMeanJerk', 'HeadJerkCost', 'HeadXPathLength', 'HeadYPathLength', 'HeadZPathLength', 'HeadThreeDPathLength'])
@@ -52,7 +52,7 @@ for part in sorted(DemoData.ID):
         try:
             if 'startmove' in locals():
                 del [startmove, endmove, ReactionTime, MovementDur, CupMoveDur, MouthMoveDur,
-                   HandCupMoveMaxVel, HandCupMoveMeanVel, HandMouthMoveMaxVel, HandMouthMoveMeanVel, HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
+                   HandCupMoveMaxVel, HandCupMoveMeanVel, CupMoveTimetoMaxPeak, HandMouthMoveMaxVel, HandMouthMoveMeanVel, MouthMoveTimetoMaxPeak, HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
                    ChestMaxVel, ChestMeanVel, ChestMaxAccel, ChestMeanAccel, ChestMaxJerk, ChestMeanJerk, ChestJerkCost, ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength,
                    HeadMaxVel, HeadMeanVel, HeadMaxAccel, HeadMeanAccel, HeadMaxJerk, HeadMeanJerk, HeadJerkCost, HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength]
         except Exception:
@@ -152,7 +152,10 @@ for part in sorted(DemoData.ID):
             endmove = int(mouth_stops[0])
 
             # Segmenting the movement
-            CupReach = numpy.where((HandMarker.Z - CupMarker.Z[0]) < handcupdist)[0][0]
+            for i in range(len(Handvel[startmove:endmove]) + 1):
+                if (HandMarker.Z[startmove + i] - CupMarker.Z[0] < handcupdist) and (Handvel[startmove + i] < Handvel.max() * percentstopthresh):
+                    CupReach = startmove + i
+                    break
 
             # Distance between hand and cup
             CupDistX = abs(CupMarker.X[0] - HandMarker.X[startmove])
@@ -183,6 +186,8 @@ for part in sorted(DemoData.ID):
             HandCupMoveMaxJerk = numpy.amax(Handjerk[startmove:CupReach])
             HandCupMoveMeanJerk = numpy.mean(Handjerk[startmove:CupReach])
 
+            CupMoveTimetoMaxPeak = TRC.Time[startmove + numpy.where(Handvel[startmove:CupReach] == HandCupMoveMaxVel)[0][0]] - TRC.Time[startmove]
+
             # Bringing Cup to the Mouth
             HandMouthMoveMaxVel = numpy.amax(Handvel[CupReach:endmove])
             HandMouthMoveMeanVel = numpy.mean(Handvel[CupReach:endmove])
@@ -191,6 +196,7 @@ for part in sorted(DemoData.ID):
             HandMouthMoveMaxJerk = numpy.amax(Handjerk[CupReach:endmove])
             HandMouthMoveMeanJerk = numpy.mean(Handjerk[CupReach:endmove])
 
+            MouthMoveTimetoMaxPeak = TRC.Time[CupReach + numpy.where(Handvel[CupReach:endmove] == HandMouthMoveMaxVel)[0][0]] - TRC.Time[CupReach]
 
             # Chest
             ChestMaxVel = numpy.amax(Chestvel[startmove:endmove])
@@ -235,7 +241,7 @@ for part in sorted(DemoData.ID):
 
             # Append data to database
             ith_parttrial = [part, Group, Age, Trial, Hand, ReactionTime, MovementDur, CupMoveDur, MouthMoveDur,
-                            HandCupMoveMaxVel, HandCupMoveMeanVel, HandMouthMoveMaxVel, HandMouthMoveMeanVel,
+                            HandCupMoveMaxVel, HandCupMoveMeanVel, CupMoveTimetoMaxPeak, HandMouthMoveMaxVel, HandMouthMoveMeanVel, MouthMoveTimetoMaxPeak,
                             HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
                             ChestMaxVel, ChestMeanVel, ChestMaxAccel, ChestMeanAccel, ChestMaxJerk, ChestMeanJerk, ChestJerkCost, ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength,
                             HeadMaxVel, HeadMeanVel, HeadMaxAccel, HeadMeanAccel, HeadMaxJerk, HeadMeanJerk, HeadJerkCost, HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength]
