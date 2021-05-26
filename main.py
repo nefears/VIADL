@@ -8,9 +8,9 @@ from jerkcost import jerkcost
 
 # Workspace and directory definitions
 home = os.getcwd()
-# dataloc = 'D:/Dropbox (University of Michigan)/Python'
+dataloc = 'D:/Dropbox (University of Michigan)/Python'
 # dataloc = 'F:/Projects/VIADL/Data/Cortex'
-dataloc = "C:/Users/nefea/Dropbox (University of Michigan)/Python"
+# dataloc = "C:/Users/nefea/Dropbox (University of Michigan)/Python"
 os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
 CupData = pandas.read_excel('INSARCupData.xlsx', sheet_name='CupLocation')
@@ -153,14 +153,16 @@ for filenum in range(0, len(files)):
         endmove = int(mouth_stops[0])
 
         # Segmenting the movement
-        CupReach = numpy.where((HandMarker.Z-CupMarker.Z[0]) < handcupdist)[0][0]
+        for i in range(len(Handvel[startmove:endmove])+1):
+            if (HandMarker.Z[startmove+i]-CupMarker.Z[0] < handcupdist) and (Handvel[startmove+i] < Handvel.max()*percentstopthresh):
+                CupReach = startmove+i
+                break
 
         # Distance between hand and cup
         CupDistX = abs(CupMarker.X[0] - HandMarker.X[startmove])
         CupDistY = abs(CupMarker.Y[0] - HandMarker.Y[startmove])
         CupDistZ = abs(CupMarker.Z[0] - HandMarker.Z[startmove])
         CupDist3D = abs(numpy.linalg.norm(numpy.asarray(CupMarker.iloc[[0]]) - numpy.asarray(HandMarker.iloc[[startmove]]), 2))
-
 
         # Reaction Time and Movement Time
         ReactionTime = TRC.Time[startmove]-TRC.Time[61]
@@ -187,6 +189,8 @@ for filenum in range(0, len(files)):
         HandCupMoveMaxJerk = numpy.amax(Handjerk[startmove:CupReach])
         HandCupMoveMeanJerk = numpy.mean(Handjerk[startmove:CupReach])
 
+        CupMoveTimetoMaxPeak = TRC.Time[startmove+numpy.where(Handvel[startmove:CupReach] == HandCupMoveMaxVel)[0][0]]-TRC.Time[startmove]
+
         # Bringing Cup to the Mouth
         HandMouthMoveMaxVel = numpy.amax(Handvel[CupReach:endmove])
         HandMouthMoveMeanVel = numpy.mean(Handvel[CupReach:endmove])
@@ -194,6 +198,8 @@ for filenum in range(0, len(files)):
         HandMouthMoveMeanAccel = numpy.mean(Handaccel[CupReach:endmove])
         HandMouthMoveMaxJerk = numpy.amax(Handjerk[CupReach:endmove])
         HandMouthMoveMeanJerk = numpy.mean(Handjerk[CupReach:endmove])
+
+        MouthMoveTimetoMaxPeak = TRC.Time[CupReach+numpy.where(Handvel[CupReach:endmove] == HandMouthMoveMaxVel)[0][0]]-TRC.Time[CupReach]
 
         # Chest
         ChestMaxVel = numpy.amax(Chestvel[startmove:endmove])
