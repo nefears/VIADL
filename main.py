@@ -1,6 +1,6 @@
 import os, pandas, numpy, sys
 from scipy import signal
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from read_trc import read_trc
 from read_filenames import read_filenames
 from pathlength import pathlength
@@ -23,7 +23,7 @@ filter_type = 'lowpass'
 filter_order = 4
 filter_cutoff = 10/(framerate/2)
 
-outputfilename = "Combined_IMDRC2021_HandChestHead_05262021_105075_10Hzfiltered_test.csv"
+outputfilename = "Combined_IMDRC2021_HandChestHead_05262021_105075_10Hzfiltered_test2.csv"
 
 # Create database using Pandas dataframe
 db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur', 'CupMoveDur', 'MouthMoveDur',
@@ -247,47 +247,64 @@ for part in sorted(DemoData.ID):
                             HeadMaxVel, HeadMeanVel, HeadMaxAccel, HeadMeanAccel, HeadMaxJerk, HeadMeanJerk, HeadJerkCost, HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength]
 
             db.loc[len(db)] = ith_parttrial
+
+            # # Plot figure to check data
+            # fig, (Xposplot, Yposplot, Zposplot, velplot, accelplot, jerkplot) = plt.subplots(6, 1)
+            # fig.suptitle(part + '- ' + Hand + ' Hand, Trial ' + Trial)
+            # Time = TRC.Time[0:endmove]
+            # plt.xticks(numpy.arange(min(Time), max(Time) + 1, .5))
+            # Xposplot.plot(Time[0:endmove], (HandMarker.X[0:endmove]) - HandMarker.X[startmove])
+            # Xposplot.set_ylabel('X Position')
+            # Xposplot.axvline(x=.5, color='blue')
+            # Xposplot.axvline(x=Time[startmove], color='green')
+            # Xposplot.axvline(x=Time[CupReach], color='orange')
+            # Xposplot.axvline(x=Time[endmove], color='red')
+            #
+            # Yposplot.plot(Time[0:endmove], HandMarker.Y[0:endmove] - HandMarker.Y[startmove])
+            # Yposplot.set_ylabel('Y Position')
+            # Yposplot.axvline(x=.5, color='blue')
+            # Yposplot.axvline(x=Time[startmove], color='green')
+            # Yposplot.axvline(x=Time[CupReach], color='orange')
+            # Yposplot.axvline(x=Time[endmove], color='red')
+            #
+            # Zposplot.plot(Time[0:endmove], (HandMarker.Z[0:endmove] - HandMarker.Z[startmove]) * -1)
+            # Zposplot.set_ylabel('Z Position')
+            # Zposplot.axvline(x=.5, color='blue')
+            # Zposplot.axvline(x=Time[startmove], color='green')
+            # Zposplot.axvline(x=Time[CupReach], color='orange')
+            # Zposplot.axvline(x=Time[endmove], color='red')
+            #
+            # velplot.plot(Time[0:endmove], Handvel[0:endmove])
+            # velplot.set_ylabel('Velocity')
+            # velplot.axvline(x=.5, color='blue')
+            # velplot.axvline(x=Time[startmove], color='green')
+            # velplot.axvline(x=Time[CupReach], color='orange')
+            # velplot.axvline(x=Time[endmove], color='red')
+            #
+            # accelplot.plot(Time[0:endmove], Handaccel[0:endmove])
+            # accelplot.set_ylabel('Acceleration')
+            # accelplot.axvline(x=.5, color='blue')
+            # accelplot.axvline(x=Time[startmove], color='green')
+            # accelplot.axvline(x=Time[CupReach], color='orange')
+            # accelplot.axvline(x=Time[endmove], color='red')
+            #
+            # jerkplot.plot(Time[0:endmove], Handjerk[0:endmove])
+            # jerkplot.set_ylabel('Jerk')
+            # jerkplot.set_xlabel('Time (ms)')
+            # jerkplot.axvline(x=.5, color='blue')
+            # jerkplot.axvline(x=Time[startmove], color='green')
+            # jerkplot.axvline(x=Time[CupReach], color='orange')
+            # jerkplot.axvline(x=Time[endmove], color='red')
+
             print("Completed " + part + " " + Hand + " Hand, Trial " + str(Trial))
         except Exception:
             print(part + " " + Hand + " Hand, Trial " + str(Trial) + " failed!", "\n",
                   "Unexpected error: ", sys.exc_info()[0])
             continue
 
+
+
 # Save database to CSV
 os.chdir(dataloc)
 db.to_csv(outputfilename, mode='a', header=False, index=False)
 
-# Plot figure to check data
-# fig, (Xposplot, Yposplot, Zposplot, velplot, accelplot, jerkplot) = plt.subplots(6, 1)
-# fig.suptitle(part+'- '+Hand+' Hand, Trial '+Trial)
-# Time = numpy.asarray(range(0, len(Handvel), 1))*frametime
-# Xposplot.plot(Time[0:endmove], (HandMarker.X[0:endmove])-HandMarker.X[startmove])
-# Xposplot.set_ylabel('X Position')
-# Xposplot.axvline(x=.5, color='blue')
-# Xposplot.axvline(x=Time[startmove], color='green')
-#
-# Yposplot.plot(Time[0:endmove], HandMarker.Y[0:endmove]-HandMarker.Y[startmove])
-# Yposplot.set_ylabel('Y Position')
-# Yposplot.axvline(x=.5, color='blue')
-# Yposplot.axvline(x=Time[startmove], color='green')
-#
-# Zposplot.plot(Time[0:endmove], HandMarker.Z[0:endmove]-HandMarker.Z[startmove])
-# Zposplot.set_ylabel('Z Position')
-# Zposplot.axvline(x=.5, color='blue')
-# Zposplot.axvline(x=Time[startmove], color='green')
-#
-# velplot.plot(Time[0:endmove], Handvel[0:endmove])
-# velplot.set_ylabel('Velocity')
-# velplot.axvline(x=.5, color='blue')
-# velplot.axvline(x=Time[startmove], color='green')
-#
-# accelplot.plot(Time[0:endmove], Handaccel[0:endmove])
-# accelplot.set_ylabel('Acceleration')
-# accelplot.axvline(x=.5, color='blue')
-# accelplot.axvline(x=Time[startmove], color='green')
-#
-# jerkplot.plot(Time[0:endmove], Handjerk[0:endmove])
-# jerkplot.set_ylabel('Jerk')
-# jerkplot.set_xlabel('Time (ms)')
-# jerkplot.axvline(x=.5, color='blue')
-# jerkplot.axvline(x=Time[startmove], color='green')
