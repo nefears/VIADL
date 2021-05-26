@@ -8,8 +8,8 @@ from jerkcost import jerkcost
 
 # Workspace and directory definitions
 home = os.getcwd()
-dataloc = 'D:/Dropbox (University of Michigan)/Python'
-# dataloc = 'F:/Projects/VIADL/Data/Cortex'
+# dataloc = 'D:/Dropbox (University of Michigan)/Python'
+dataloc = 'F:/Projects/VIADL/Data/Cortex'
 # dataloc = "C:/Users/nefea/Dropbox (University of Michigan)/Python"
 os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
@@ -23,7 +23,7 @@ filter_type = 'lowpass'
 filter_order = 4
 filter_cutoff = 10/(framerate/2)
 
-outputfilename = "Combined_IMDRC2021_HandChestHead_05242021_1075_10Hzfiltered_Test.csv"
+outputfilename = "Combined_IMDRC2021_HandChestHead_05262021_105075_10Hzfiltered_Test3.csv"
 
 # Create database using Pandas dataframe
 db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur', 'MouthMoveDur','CupMoveDur',
@@ -34,7 +34,7 @@ db.to_csv(outputfilename, mode='w', index=False)
 
 # Loop through all parts in DemoData
 # for part in sorted(DemoData.ID):
-part = 'VIADL_022'
+part = 'VIADL_013'
 # Save for each part
 Group = DemoData.loc[numpy.where(DemoData.ID == part)[0], 'Group'].item()
 Age = DemoData.loc[numpy.where(DemoData.ID == part)[0], 'Age'].item()
@@ -46,7 +46,7 @@ os.chdir(folder)
 files = sorted(read_filenames(['cup', 'UPPER.trc']))
 
 # For loop by number of trials within part
-for filenum in range(0, len(files)):
+for filenum in range(0, len(files)): #range(0, len(files)
     if 'Trial' in locals():
         del [Trial, Hand, CupLoc, HandMarker, ChestMarker, HeadMarker]
     try:
@@ -153,10 +153,20 @@ for filenum in range(0, len(files)):
         endmove = int(mouth_stops[0])
 
         # Segmenting the movement
+        CupReach = None
         for i in range(len(Handvel[startmove:endmove])+1):
             if (HandMarker.Z[startmove+i]-CupMarker.Z[0] < handcupdist) and (Handvel[startmove+i] < Handvel.max()*percentstopthresh):
                 CupReach = startmove+i
+                print(CupReach)
                 break
+            elif (HandMarker.Z[startmove + i] - CupMarker.Z[0] < handcupdist) and (Handvel[startmove + i] < Handvel.max() * percentstopthresh*2):
+                CupReach = startmove + i
+                print(CupReach)
+                break
+            # elif HandMarker.Z[startmove + i] - CupMarker.Z[0] < handcupdist:
+            #     CupReach = startmove + i
+            #     print(CupReach)
+            #     break
 
         # Distance between hand and cup
         CupDistX = abs(CupMarker.X[0] - HandMarker.X[startmove])
@@ -275,6 +285,7 @@ for filenum in range(0, len(files)):
         Zposplot.axvline(x=Time[startmove], color='green')
         Zposplot.axvline(x=Time[CupReach], color='orange')
         Zposplot.axvline(x=Time[endmove], color='red')
+        Zposplot.axhline(y=(CupMarker.Z[0]-HandMarker.Z[startmove])*-1)
 
         velplot.plot(Time[0:endmove], Handvel[0:endmove])
         velplot.set_ylabel('Velocity')
