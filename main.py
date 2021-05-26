@@ -23,7 +23,7 @@ filter_type = 'lowpass'
 filter_order = 4
 filter_cutoff = 10/(framerate/2)
 
-outputfilename = "Combined_IMDRC2021_HandChestHead_05262021_105075_10Hzfiltered_test2.csv"
+outputfilename = "Combined_IMDRC2021_HandChestHead_05262021_105075_10Hzfiltered_test3.csv"
 
 # Create database using Pandas dataframe
 db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur', 'CupMoveDur', 'MouthMoveDur',
@@ -152,9 +152,17 @@ for part in sorted(DemoData.ID):
             endmove = int(mouth_stops[0])
 
             # Segmenting the movement
+            CupReach = None
             for i in range(len(Handvel[startmove:endmove]) + 1):
-                if (HandMarker.Z[startmove + i] - CupMarker.Z[0] < handcupdist) and (Handvel[startmove + i] < Handvel.max() * percentstopthresh):
+                if (HandMarker.Z[startmove + i] - CupMarker.Z[0] < handcupdist) and (
+                        Handvel[startmove + i] < Handvel.max() * percentstopthresh):
                     CupReach = startmove + i
+                    print(CupReach)
+                    break
+                elif (HandMarker.Z[startmove + i] - CupMarker.Z[0] < handcupdist) and (
+                        Handvel[startmove + i] < Handvel.max() * percentstopthresh * 2):
+                    CupReach = startmove + i
+                    print(CupReach)
                     break
 
             # Distance between hand and cup
@@ -301,8 +309,6 @@ for part in sorted(DemoData.ID):
             print(part + " " + Hand + " Hand, Trial " + str(Trial) + " failed!", "\n",
                   "Unexpected error: ", sys.exc_info()[0])
             continue
-
-
 
 # Save database to CSV
 os.chdir(dataloc)
