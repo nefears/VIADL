@@ -15,7 +15,7 @@ os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
 CupData = pandas.read_excel('INSARCupData.xlsx', sheet_name='CupLocation')
 mouthdist = 75
-handcupdist = 30
+handcupdist = 50
 percentstartthresh = .10
 percentstopthresh = .10
 framerate = 120
