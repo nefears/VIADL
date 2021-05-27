@@ -1,10 +1,11 @@
-import os, pandas, numpy, sys
+import os, pandas, numpy, traceback
 from scipy import signal
 import matplotlib.pyplot as plt
 from read_trc import read_trc
 from read_filenames import read_filenames
 from pathlength import pathlength
 from jerkcost import jerkcost
+from datetime import datetime
 
 # Workspace and directory definitions
 home = os.getcwd()
@@ -15,7 +16,7 @@ os.chdir(dataloc)
 DemoData = pandas.read_excel('INSARDemoData.xlsx')
 CupData = pandas.read_excel('INSARCupData.xlsx', sheet_name='CupLocation')
 mouthdist = 75
-handcupdist=50
+handcupdist = 50
 percentstartthresh = .10
 percentstopthresh = .10
 framerate = 120
@@ -23,11 +24,14 @@ filter_type = 'lowpass'
 filter_order = 4
 filter_cutoff = 10/(framerate/2)
 
-outputfilename = "Combined_IMDRC2021_HandChestHead_05262021_105075_10Hzfiltered_test3.csv"
+now = datetime.now()
+now = now.strftime('%m%d%Y%H%M')
+outputfilename = 'Combined_IMDRC2021_HandChestHead_' + now + '_105075_10Hzfiltered.csv'
 
 # Create database using Pandas dataframe
 db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur', 'CupMoveDur', 'MouthMoveDur',
-                                'HandCupMoveMaxVel', 'HandCupMoveMeanVel', 'CupMoveTimetoMaxPeak', 'HandMouthMoveMaxVel', 'HandMouthMoveMeanVel', 'MouthMoveTimetoMaxPeak',
+                                'HandCupMoveMaxVel', 'HandCupMoveMeanVel', 'CupMoveTimetoMaxPeak', 'HandCupMoveJerkCost', 'HandCupMoveXPathLength', 'HandCupMoveYPathLength', 'HandCupMoveZPathLength', 'HandCupMoveThreeDPathLength',
+                               'HandMouthMoveMaxVel', 'HandMouthMoveMeanVel', 'MouthMoveTimetoMaxPeak', 'HandMouthMoveJerkCost', 'HandMouthMoveXPathLength', 'HandMouthMoveYPathLength', 'HandMouthMoveZPathLength', 'HandMouthMoveThreeDPathLength',
                                'HandMaxVel', 'HandMeanVel', 'HandMaxAccel', 'HandMeanAccel','HandMaxJerk', 'HandMeanJerk', 'HandJerkCost', 'HandXPathLength', 'HandYPathLength', 'HandZPathLength', 'HandThreeDPathLength',
                                'ChestMaxVel', 'ChestMeanVel', 'ChestMaxAccel', 'ChestMeanAccel','ChestMaxJerk', 'ChestMeanJerk', 'ChestJerkCost', 'ChestXPathLength', 'ChestYPathLength', 'ChestZPathLength', 'ChestThreeDPathLength',
                                'HeadMaxVel', 'HeadMeanVel', 'HeadMaxAccel', 'HeadMeanAccel','HeadMaxJerk', 'HeadMeanJerk', 'HeadJerkCost', 'HeadXPathLength', 'HeadYPathLength', 'HeadZPathLength', 'HeadThreeDPathLength'])
@@ -52,11 +56,13 @@ for part in sorted(DemoData.ID):
         try:
             if 'startmove' in locals():
                 del [startmove, endmove, ReactionTime, MovementDur, CupMoveDur, MouthMoveDur,
-                   HandCupMoveMaxVel, HandCupMoveMeanVel, CupMoveTimetoMaxPeak, HandMouthMoveMaxVel, HandMouthMoveMeanVel, MouthMoveTimetoMaxPeak, HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
+                   HandCupMoveMaxVel, HandCupMoveMeanVel, CupMoveTimetoMaxPeak, HandCupMoveJerkCost, HandCupMoveXPathLength, HandCupMoveYPathLength, HandCupMoveZPathLength, HandCupMoveThreeDPathLength,
+                   HandMouthMoveMaxVel, HandMouthMoveMeanVel, MouthMoveTimetoMaxPeak, HandMouthMoveJerkCost, HandMouthMoveXPathLength, HandMouthMoveYPathLength, HandMouthMoveZPathLength, HandMouthMoveThreeDPathLength,
+                   HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
                    ChestMaxVel, ChestMeanVel, ChestMaxAccel, ChestMeanAccel, ChestMaxJerk, ChestMeanJerk, ChestJerkCost, ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength,
                    HeadMaxVel, HeadMeanVel, HeadMaxAccel, HeadMeanAccel, HeadMaxJerk, HeadMeanJerk, HeadJerkCost, HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength]
         except Exception:
-            print("Unexpected error during deleting: ", sys.exc_info()[0])
+            print("Unexpected error during deleting: ", traceback.format_exc())
         # Read in TRC data
         filename = files[filenum]
         TRC = read_trc(filename, folder, home)
@@ -158,11 +164,13 @@ for part in sorted(DemoData.ID):
                         Handvel[startmove + i] < Handvel.max() * percentstopthresh):
                     CupReach = startmove + i
                     print(CupReach)
+                    print(percentstopthresh)
                     break
                 elif (HandMarker.Z[startmove + i] - CupMarker.Z[0] < handcupdist) and (
                         Handvel[startmove + i] < Handvel.max() * percentstopthresh * 2):
                     CupReach = startmove + i
                     print(CupReach)
+                    print(percentstopthresh*2)
                     break
 
             # Distance between hand and cup
@@ -170,6 +178,9 @@ for part in sorted(DemoData.ID):
             CupDistY = abs(CupMarker.Y[0] - HandMarker.Y[startmove])
             CupDistZ = abs(CupMarker.Z[0] - HandMarker.Z[startmove])
             CupDist3D = abs(numpy.linalg.norm(numpy.asarray(CupMarker.iloc[[0]]) - numpy.asarray(HandMarker.iloc[[startmove]]), 2))
+
+            # Distance between hand to mouth
+            MouthMoveDist3D = abs(numpy.linalg.norm(numpy.asarray(HandMarker.iloc[[CupReach]]) - numpy.asarray(HeadMarker.iloc[[endmove]]), 2))
 
             # Reaction Time and Movement Time
             ReactionTime = TRC.Time[startmove]-TRC.Time[61]
@@ -223,25 +234,39 @@ for part in sorted(DemoData.ID):
             HeadMeanJerk = numpy.mean(Headjerk[startmove:endmove])
 
             # Jerk Cost
-            HandJerkCost = jerkcost(x=Handjerk, frametime=frametime, framerate=framerate, max_vel=HandMaxVel)
-            ChestJerkCost = jerkcost(x=Chestjerk, frametime=frametime, framerate=framerate, max_vel=ChestMaxVel)
-            HeadJerkCost = jerkcost(x=Headjerk, frametime=frametime, framerate=framerate, max_vel=HeadMaxVel)
+            HandJerkCost = jerkcost(xjerktraj=Handjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, dist=CupDist3D)
+            ChestJerkCost = jerkcost(xjerktraj=Chestjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, dist=CupDist3D)
+            HeadJerkCost = jerkcost(xjerktraj=Headjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, dist=CupDist3D)
+
+            HandCupMoveJerkCost = jerkcost(xjerktraj=Handjerk[startmove:CupReach], movementdur=CupMoveDur, framerate=framerate, dist=CupDist3D)
+            HandMouthMoveJerkCost = jerkcost(xjerktraj=Handjerk[CupReach:endmove], movementdur=MouthMoveDur, framerate=framerate, dist=MouthMoveDist3D)
 
             # Path length
             HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength = pathlength(startmove, endmove, HandMarker.X, HandMarker.Y, HandMarker.Z)
-            ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength = pathlength(startmove, endmove, ChestMarker.X, ChestMarker.Y, ChestMarker.Z)
-            HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength = pathlength(startmove, endmove, HeadMarker.X, HeadMarker.Y, HeadMarker.Z)
-
             HandXPathLength = HandXPathLength/CupDistX
             HandYPathLength = HandYPathLength/CupDistY
             HandZPathLength = HandZPathLength/CupDistZ
             HandThreeDPathLength = HandThreeDPathLength/CupDist3D
 
+            HandCupMoveXPathLength, HandCupMoveYPathLength, HandCupMoveZPathLength, HandCupMoveThreeDPathLength = pathlength(startmove, CupReach, HandMarker.X, HandMarker.Y, HandMarker.Z)
+            HandCupMoveXPathLength = HandCupMoveXPathLength/CupDistX
+            HandCupMoveYPathLength = HandCupMoveYPathLength/CupDistY
+            HandCupMoveZPathLength = HandCupMoveZPathLength/CupDistZ
+            HandCupMoveThreeDPathLength = HandCupMoveThreeDPathLength/CupDist3D
+
+            HandMouthMoveXPathLength, HandMouthMoveYPathLength, HandMouthMoveZPathLength, HandMouthMoveThreeDPathLength = pathlength(CupReach, endmove, HandMarker.X, HandMarker.Y, HandMarker.Z)
+            HandMouthMoveXPathLength = HandMouthMoveXPathLength/CupDistX
+            HandMouthMoveYPathLength = HandMouthMoveYPathLength/CupDistY
+            HandMouthMoveZPathLength = HandMouthMoveZPathLength/CupDistZ
+            HandMouthMoveThreeDPathLength = HandMouthMoveThreeDPathLength/CupDist3D
+
+            ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength = pathlength(startmove, endmove, ChestMarker.X, ChestMarker.Y, ChestMarker.Z)
             ChestXPathLength = ChestXPathLength/CupDistX
             ChestYPathLength = ChestYPathLength/CupDistY
             ChestZPathLength = ChestZPathLength/CupDistZ
             ChestThreeDPathLength = ChestThreeDPathLength/CupDist3D
 
+            HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength = pathlength(startmove, endmove, HeadMarker.X, HeadMarker.Y, HeadMarker.Z)
             HeadXPathLength = HeadXPathLength/CupDistX
             HeadYPathLength = HeadYPathLength/CupDistY
             HeadZPathLength = HeadZPathLength/CupDistZ
@@ -249,7 +274,8 @@ for part in sorted(DemoData.ID):
 
             # Append data to database
             ith_parttrial = [part, Group, Age, Trial, Hand, ReactionTime, MovementDur, CupMoveDur, MouthMoveDur,
-                            HandCupMoveMaxVel, HandCupMoveMeanVel, CupMoveTimetoMaxPeak, HandMouthMoveMaxVel, HandMouthMoveMeanVel, MouthMoveTimetoMaxPeak,
+                            HandCupMoveMaxVel, HandCupMoveMeanVel, CupMoveTimetoMaxPeak, HandCupMoveJerkCost, HandCupMoveXPathLength, HandCupMoveYPathLength, HandCupMoveZPathLength, HandCupMoveThreeDPathLength,
+                            HandMouthMoveMaxVel, HandMouthMoveMeanVel, MouthMoveTimetoMaxPeak, HandMouthMoveJerkCost, HandMouthMoveXPathLength, HandMouthMoveYPathLength, HandMouthMoveZPathLength, HandMouthMoveThreeDPathLength,
                             HandMaxVel, HandMeanVel, HandMaxAccel, HandMeanAccel,HandMaxJerk, HandMeanJerk, HandJerkCost, HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength,
                             ChestMaxVel, ChestMeanVel, ChestMaxAccel, ChestMeanAccel, ChestMaxJerk, ChestMeanJerk, ChestJerkCost, ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength,
                             HeadMaxVel, HeadMeanVel, HeadMaxAccel, HeadMeanAccel, HeadMaxJerk, HeadMeanJerk, HeadJerkCost, HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength]
@@ -307,7 +333,7 @@ for part in sorted(DemoData.ID):
             print("Completed " + part + " " + Hand + " Hand, Trial " + str(Trial))
         except Exception:
             print(part + " " + Hand + " Hand, Trial " + str(Trial) + " failed!", "\n",
-                  "Unexpected error: ", sys.exc_info()[0])
+                  "Unexpected error: ", traceback.format_exc())
             continue
 
 # Save database to CSV
