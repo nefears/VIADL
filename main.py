@@ -26,7 +26,7 @@ filter_cutoff = 10/(framerate/2)
 
 now = datetime.now()
 now = now.strftime('%m%d%Y%H%M')
-outputfilename = 'Combined_IMDRC2021_HandChestHead_' + now + '_105075_10Hzfiltered.csv'
+outputfilename = 'Combined_Pilot_HandChestHead_' + now + '_105075_10Hzfiltered.csv'
 
 # Create database using Pandas dataframe
 db = pandas.DataFrame(columns=['ID', 'Group', 'Age', 'Trial', 'Hand', 'ReactionTime', 'MovementDur', 'CupMoveDur', 'MouthMoveDur',
@@ -233,40 +233,44 @@ for part in sorted(DemoData.ID):
             HeadMaxJerk = numpy.amax(Headjerk[startmove:endmove])
             HeadMeanJerk = numpy.mean(Headjerk[startmove:endmove])
 
-            # Jerk Cost
-            HandJerkCost = jerkcost(xjerktraj=Handjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, dist=CupDist3D)
-            ChestJerkCost = jerkcost(xjerktraj=Chestjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, dist=CupDist3D)
-            HeadJerkCost = jerkcost(xjerktraj=Headjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, dist=CupDist3D)
-
-            HandCupMoveJerkCost = jerkcost(xjerktraj=Handjerk[startmove:CupReach], movementdur=CupMoveDur, framerate=framerate, dist=CupDist3D)
-            HandMouthMoveJerkCost = jerkcost(xjerktraj=Handjerk[CupReach:endmove], movementdur=MouthMoveDur, framerate=framerate, dist=MouthMoveDist3D)
-
-            # Path length
+            # Raw Path length
             HandXPathLength, HandYPathLength, HandZPathLength, HandThreeDPathLength = pathlength(startmove, endmove, HandMarker.X, HandMarker.Y, HandMarker.Z)
+            HandCupMoveXPathLength, HandCupMoveYPathLength, HandCupMoveZPathLength, HandCupMoveThreeDPathLength = pathlength(startmove, CupReach, HandMarker.X, HandMarker.Y, HandMarker.Z)
+            HandMouthMoveXPathLength, HandMouthMoveYPathLength, HandMouthMoveZPathLength, HandMouthMoveThreeDPathLength = pathlength(CupReach, endmove, HandMarker.X, HandMarker.Y, HandMarker.Z)
+
+            ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength = pathlength(startmove, endmove, ChestMarker.X, ChestMarker.Y, ChestMarker.Z)
+
+            HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength = pathlength(startmove, endmove, HeadMarker.X, HeadMarker.Y, HeadMarker.Z)
+
+            # Jerk Cost
+            HandJerkCost = jerkcost(xjerktraj=Handjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, pathlength=HandThreeDPathLength)
+            ChestJerkCost = jerkcost(xjerktraj=Chestjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, pathlength=ChestThreeDPathLength)
+            HeadJerkCost = jerkcost(xjerktraj=Headjerk[startmove:endmove], movementdur=MovementDur, framerate=framerate, pathlength=HeadThreeDPathLength)
+
+            HandCupMoveJerkCost = jerkcost(xjerktraj=Handjerk[startmove:CupReach], movementdur=CupMoveDur, framerate=framerate, pathlength=HandCupMoveThreeDPathLength)
+            HandMouthMoveJerkCost = jerkcost(xjerktraj=Handjerk[CupReach:endmove], movementdur=MouthMoveDur, framerate=framerate, pathlength=HandMouthMoveThreeDPathLength)
+
+            # Normalize path lengths
             HandXPathLength = HandXPathLength/CupDistX
             HandYPathLength = HandYPathLength/CupDistY
             HandZPathLength = HandZPathLength/CupDistZ
             HandThreeDPathLength = HandThreeDPathLength/CupDist3D
 
-            HandCupMoveXPathLength, HandCupMoveYPathLength, HandCupMoveZPathLength, HandCupMoveThreeDPathLength = pathlength(startmove, CupReach, HandMarker.X, HandMarker.Y, HandMarker.Z)
             HandCupMoveXPathLength = HandCupMoveXPathLength/CupDistX
             HandCupMoveYPathLength = HandCupMoveYPathLength/CupDistY
             HandCupMoveZPathLength = HandCupMoveZPathLength/CupDistZ
             HandCupMoveThreeDPathLength = HandCupMoveThreeDPathLength/CupDist3D
 
-            HandMouthMoveXPathLength, HandMouthMoveYPathLength, HandMouthMoveZPathLength, HandMouthMoveThreeDPathLength = pathlength(CupReach, endmove, HandMarker.X, HandMarker.Y, HandMarker.Z)
             HandMouthMoveXPathLength = HandMouthMoveXPathLength/CupDistX
             HandMouthMoveYPathLength = HandMouthMoveYPathLength/CupDistY
             HandMouthMoveZPathLength = HandMouthMoveZPathLength/CupDistZ
             HandMouthMoveThreeDPathLength = HandMouthMoveThreeDPathLength/CupDist3D
 
-            ChestXPathLength, ChestYPathLength, ChestZPathLength, ChestThreeDPathLength = pathlength(startmove, endmove, ChestMarker.X, ChestMarker.Y, ChestMarker.Z)
             ChestXPathLength = ChestXPathLength/CupDistX
             ChestYPathLength = ChestYPathLength/CupDistY
             ChestZPathLength = ChestZPathLength/CupDistZ
             ChestThreeDPathLength = ChestThreeDPathLength/CupDist3D
 
-            HeadXPathLength, HeadYPathLength, HeadZPathLength, HeadThreeDPathLength = pathlength(startmove, endmove, HeadMarker.X, HeadMarker.Y, HeadMarker.Z)
             HeadXPathLength = HeadXPathLength/CupDistX
             HeadYPathLength = HeadYPathLength/CupDistY
             HeadZPathLength = HeadZPathLength/CupDistZ
